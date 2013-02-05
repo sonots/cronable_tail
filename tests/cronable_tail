@@ -1,0 +1,88 @@
+#!/bin/bash # -x
+. $(dirname $0)//assert.sh
+
+LOGPATTERN="tests/dummy.log"
+POSITIONFILE="/tmp/$(basename $LOGPATTERN).pos"
+INITLINE=3
+
+cat <<"EOT" > tests/dummy.log.20130130_13
+1
+2
+3
+4
+5
+6
+7
+EOT
+
+cat <<"EOT" > tests/dummy.log.20130130_14
+8
+9
+10
+11
+12
+13
+14
+EOT
+
+test_first_time() {
+  rm -f $POSITIONFILE
+  result=$(bash cronable_tail -l $LOGPATTERN -p $POSITIONFILE -i $INITLINE)
+  assert "echo $result" "12 13 14"
+}
+
+test_from_middle() {
+  cat <<"EOT" > $POSITIONFILE
+tests/dummy.log.20130130_14
+4
+EOT
+  result=$(bash cronable_tail -l $LOGPATTERN -p $POSITIONFILE -i $INITLINE)
+  assert "echo $result" "12 13 14"
+}
+
+test_newer_file() {
+  cat <<"EOT" > $POSITIONFILE
+tests/dummy.log.20130130_13
+4
+EOT
+  result=$(bash cronable_tail -l $LOGPATTERN -p $POSITIONFILE -i $INITLINE)
+  assert "echo $result" "5 6 7 8 9 10 11 12 13 14"
+}
+
+test_no_new() {
+  cat <<"EOT" > $POSITIONFILE
+tests/dummy.log.20130130_14
+7
+EOT
+  result=$(bash cronable_tail -l $LOGPATTERN -p $POSITIONFILE -i $INITLINE)
+  assert "echo $result" ""
+}
+
+test_empty_log() {
+  cat <<"EOT" > $POSITIONFILE
+tests/dummy.log.20130130_14
+7
+EOT
+  result=$(bash cronable_tail -l $LOGPATTERN -p $POSITIONFILE -i $INITLINE)
+  assert "echo $result" ""
+}
+
+test_exceeded_position() {
+  cat <<"EOT" > $POSITIONFILE
+tests/dummy.log.20130130_14
+14
+EOT
+  result=$(bash cronable_tail -l $LOGPATTERN -p $POSITIONFILE -i $INITLINE)
+  assert "echo $result" ""
+}
+
+test_first_time
+test_from_middle
+test_newer_file
+test_no_new
+test_empty_log
+test_exceeded_position
+
+assert_end examples
+rm tests/dummy.log.20130130_13
+rm tests/dummy.log.20130130_14

@@ -1,0 +1,60 @@
+#!/bin/bash
+set -e
+export PATH="/bin:/usr/bin:/usr/local/bin"
+
+# Belows should be set by options
+LOGPATTERN="/var/log/syslog"
+POSITIONFILE="/tmp/$(basename $LOGPATTERN).pos"
+INITLINE=0
+
+func_main() {
+  # Get the latest log position
+  currlogfile=$(ls ${LOGPATTERN}* | grep -v gz$ | sort | tail -n 1)
+  [ -z "$currlogfile" ] && echo "No file found. Exit." 1>&2 && exit 1
+  currline=$(wc -l ${currlogfile} | awk '{print $1}')
+
+  # Read the previous log position
+  if [ -f "$POSITIONFILE" ]; then
+    prevlogfile=$(head -n 1 ${POSITIONFILE})
+    prevline=$(tail -n 1 ${POSITIONFILE})
+  else
+    prevlogfile=$currlogfile
+    prevline=$(expr $currline - $INITLINE) || true
+  fi
+  nextline=$(expr $prevline + 1) || true
+
+  # Output the log
+  tail -n +${nextline} ${prevlogfile}
+  [ "$currlogfile" != "$prevlogfile" ] && cat ${currlogfile}
+
+  # Write the current log position
+  echo -e "${currlogfile}\n${currline}" > ${POSITIONFILE}
+}
+
+func_usage() {
+  echo "SYNOPSIS:"
+  echo "    ${0} [OPTIONS]"
+  echo ""
+  echo "OPTIONS:"
+  echo ""
+  echo "    -l LOGPATTERN:"
+  echo "        The log filename pattern to watch. Ex) /var/log/boot.log to watch /var/log/boot.log.{1,2,3,...}"
+  echo "    -p POSITIONFILE:"
+  echo "        The path of file to store log position"
+  echo "    -i INITLINE:"
+  echo "        The number of lines to read at the first run (To prohibit reading entire lines)"
+  exit 1
+}
+
+while getopts "l:p:i:h" OPTION; do
+  case ${OPTION} in
+    l) LOGPATTERN=${OPTARG}; POSITIONFILE="/tmp/$(basename $LOGPATTERN).pos";;
+    p) POSITIONFILE=${OPTARG};;
+    i) INITLINE=${OPTARG};;
+    h) func_usage;;
+    ?) func_usage;;
+  esac
+done
+shift `expr ${OPTIND} - 1`
+
+func_main
