@@ -1,12 +1,13 @@
 # cronable_tail
 
-crontable_tail enables to read log files in tail even if the log files are logrotated such as
+crontable_tail is a shell script to read log files in tail. It memorizes the line number which previously loaded , and continues reading from the next line on the next execution.
+
+Furthermore, this script supports reading logrotated log files such as
 
     /var/log/syslog.20130130
     /var/log/syslog.20130131
 
-cronable_tail memorizes the line number which previously read, and continues to read from
-the line in the next execution. Of course, if a newer file is generated, it reads the newer file too.
+This script reads the newly generated file too if it such file exists.
 
 # Copyright
 
